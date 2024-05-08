@@ -6,7 +6,10 @@
     "lib": ["esnext", "dom", "dom.iterable"],
     "outDir": "dist/types",
     "noEmit": false,
-    "emitDeclarationOnly": true
+    "emitDeclarationOnly": true,
+    "paths": {
+      "@medplum/core": ["../core/src"]
+    }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"]
 }

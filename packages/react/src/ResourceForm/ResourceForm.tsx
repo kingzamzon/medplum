@@ -114,6 +114,7 @@ export function ResourceForm(props: ResourceFormProps): JSX.Element {
         outcome={outcome}
         onChange={setValue}
         profileUrl={props.profileUrl}
+        accessPolicy={accessPolicy}
       />
       <Group justify="flex-end" mt="xl">
         <Button type="submit">OK</Button>

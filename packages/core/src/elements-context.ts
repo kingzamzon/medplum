@@ -1,5 +1,7 @@
+import { AccessPolicy, Resource } from '@medplum/fhirtypes';
 import { InternalSchemaElement } from './typeschema/types';
 import { getPathDifference } from './utils';
+import { AccessPolicyInteraction, satisfiedAccessPolicy } from './access';
 
 /**
  * Information for the set of elements at a given path within in a resource. This mostly exists to
@@ -23,6 +25,7 @@ export type ElementsContextType = {
   profileUrl: string | undefined;
   /** Whether debug logging is enabled */
   debugMode: boolean;
+  accessPolicy: AccessPolicy | undefined;
 };
 
 export function buildElementsContext({
@@ -31,6 +34,7 @@ export function buildElementsContext({
   elements,
   profileUrl,
   debugMode,
+  accessPolicy,
 }: {
   /** The most recent `ElementsContextType` in which this context is being built. */
   parentContext: ElementsContextType | undefined;
@@ -45,6 +49,7 @@ export function buildElementsContext({
   profileUrl?: string;
   /** Whether debug logging is enabled */
   debugMode?: boolean;
+  accessPolicy?: AccessPolicy;
 }): ElementsContextType | undefined {
   if (path === parentContext?.path) {
     return undefined;
@@ -68,6 +73,7 @@ export function buildElementsContext({
     elementsByPath,
     profileUrl: profileUrl ?? parentContext?.profileUrl,
     debugMode: debugMode ?? parentContext?.debugMode ?? false,
+    accessPolicy: accessPolicy ?? parentContext?.accessPolicy,
   };
 }
 
@@ -105,5 +111,24 @@ function mergeElementsForContext(
   if (debugMode) {
     console.assert(usedNewElements, 'Unnecessary ElementsContext; not using any newly provided elements');
   }
+  return result;
+}
+
+export function applyHiddenFields(
+  resource: Resource,
+  ap: AccessPolicy | undefined,
+  elements: Record<string, InternalSchemaElement>
+): Set<string> {
+  const result: Set<string> = new Set<string>();
+  if (!ap) {
+    return result;
+  }
+  const policy = satisfiedAccessPolicy(resource, AccessPolicyInteraction.READ, ap);
+  if (policy?.hiddenFields) {
+    for (const field of policy.hiddenFields) {
+      result.add(field);
+    }
+  }
+
   return result;
 }

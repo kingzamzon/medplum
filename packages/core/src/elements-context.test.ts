@@ -1,8 +1,13 @@
-import { buildElementsContext } from './elements-context';
+import { applyHiddenFields, buildElementsContext } from './elements-context';
 import { HTTP_HL7_ORG } from './constants';
 import { isPopulated } from './utils';
-import { InternalTypeSchema, parseStructureDefinition } from './typeschema/types';
-import { StructureDefinition } from '@medplum/fhirtypes';
+import {
+  InternalTypeSchema,
+  getDataType,
+  indexStructureDefinitionBundle,
+  parseStructureDefinition,
+} from './typeschema/types';
+import { AccessPolicy, Bundle, Patient, StructureDefinition } from '@medplum/fhirtypes';
 import { readJson } from '@medplum/definitions';
 
 describe('buildElementsContext', () => {
@@ -108,5 +113,48 @@ describe('buildElementsContext', () => {
       type: 'uri',
       value: 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-race',
     });
+  });
+});
+
+describe.only('#applyHiddenFields', () => {
+  beforeAll(() => {
+    indexStructureDefinitionBundle(readJson('fhir/r4/profiles-types.json') as Bundle);
+    indexStructureDefinitionBundle(readJson('fhir/r4/profiles-resources.json') as Bundle);
+  });
+
+  test('no hidden fields', () => {
+    const schema = getDataType('Patient');
+    const elements = schema.elements;
+
+    const accessPolicy: AccessPolicy = {
+      resourceType: 'AccessPolicy',
+      resource: [{ resourceType: 'Patient', hiddenFields: [] }],
+    };
+    const patient: Patient = {
+      resourceType: 'Patient',
+      gender: 'unknown',
+      maritalStatus: { coding: [{}] },
+    };
+    const result = applyHiddenFields(patient, accessPolicy, elements);
+    expect(result.size).toBe(0);
+  });
+
+  test('some hidden fields', () => {
+    const schema = getDataType('Patient');
+    const elements = schema.elements;
+
+    const accessPolicy: AccessPolicy = {
+      resourceType: 'AccessPolicy',
+      resource: [{ resourceType: 'Patient', hiddenFields: ['gender'] }],
+    };
+    const patient: Patient = {
+      resourceType: 'Patient',
+      gender: 'unknown',
+      maritalStatus: { coding: [{}] },
+    };
+    console.log(JSON.stringify(Object.keys(elements), undefined, 2));
+    const result = applyHiddenFields(patient, accessPolicy, elements);
+    expect(result.size).toBe(1);
+    expect(result.has('gender'));
   });
 });
